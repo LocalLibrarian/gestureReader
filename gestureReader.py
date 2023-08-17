@@ -11,34 +11,44 @@ GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
+paused = False   # Bool for pausing reading input
+request_stop = False    # Bool for when to stop the app
 did_read = False  # Controls delays in reading more gestures to prevent repeats
 process_delay = 10  # Used to adjust target FPS due to processing delays
 one_sec = 1000  # Constant for 1 second
 keyboard = Controller()  # Used to control inputs
 volume_change = 2  # Used to control how much volume changes by
-def_read_delay = 2  # Default read delay
+def_read_delay = 1  # Default read delay
 def_fps = 30    # Default target fps
 
 
 def process_result(result: GestureRecognizerResult, useless1, useless2):
     global did_read
+    global request_stop
+    global paused
     if not did_read and len(result.gestures) > 0 and result.gestures[0][0].category_name != 'None':
         did_read = True
         gesture = result.gestures[0][0].category_name
-        print('DEBUG: gesture recognition result: {}'.format(result))
-        if gesture == "Thumb_Up":
-            for x in range(volume_change):
-                keyboard.press(Key.media_volume_up)
-                keyboard.release(Key.media_volume_up)
-                time.sleep(0.01)
-        elif gesture == "Thumb_Down":
-            for x in range(volume_change):
-                keyboard.press(Key.media_volume_down)
-                keyboard.release(Key.media_volume_down)
-                time.sleep(0.01)
-        elif gesture == "Open_Palm":
-            keyboard.press(Key.media_play_pause)
-            keyboard.release(Key.media_play_pause)
+        if gesture == "Victory":
+            paused = not paused
+            print('DEBUG: gesture recognition result: {}'.format(result))
+        if not paused:
+            print('DEBUG: gesture recognition result: {}'.format(result))
+            if gesture == "Thumb_Up":
+                for x in range(volume_change):
+                    keyboard.press(Key.media_volume_up)
+                    keyboard.release(Key.media_volume_up)
+                    time.sleep(0.01)
+            elif gesture == "Thumb_Down":
+                for x in range(volume_change):
+                    keyboard.press(Key.media_volume_down)
+                    keyboard.release(Key.media_volume_down)
+                    time.sleep(0.01)
+            elif gesture == "Open_Palm":
+                keyboard.press(Key.media_play_pause)
+                keyboard.release(Key.media_play_pause)
+            elif gesture == "Closed_Fist":
+                request_stop = True
 
 
 def return_camera_indexes():
@@ -65,7 +75,7 @@ def run(sel_camera, target_fps, delay_read, volume_change_val):
     timer = 0
     global did_read
     with GestureRecognizer.create_from_options(options) as recognizer:
-        while True:
+        while not request_stop:
             timer += 1
             ret, img = cam.read()
             cur_time = time.time()
@@ -77,11 +87,13 @@ def run(sel_camera, target_fps, delay_read, volume_change_val):
                 print("DEBUG: Read valid input, delaying next read...")
                 cv.waitKey(delay_read * one_sec)
             cv.putText(img, f"FPS: {int(fps)}", (0, 70), cv.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 2)
-            cv.imshow("Output", img)
+            cv.imshow("Debug", img)
             if did_read:
                 did_read = False
             else:
                 cv.waitKey(round(1000 / target_fps) - process_delay)
+        recognizer.close()
+    cam.release()
 
 
 options = GestureRecognizerOptions(
@@ -130,19 +142,13 @@ volume_change_field = tk.Entry(main)
 volume_change_field.insert(0, volume_change)
 volume_change_field.grid(row=11, column=0)
 
-tk.Label(main, text="Start/Stop On/Off:").grid(row=12, column=0)
-# Placeholder for now
-checkbox_var = tk.BooleanVar(value=False)
-checkbox = tk.Checkbutton(main, text="True/False", variable=checkbox_var)
-checkbox.grid(row=13, column=0)
-
 # Start Button
 start_button = tk.Button(main, text="Start", command=lambda: run(camera_sel.get(),
                                                                  int(fps_target.get()),
                                                                  int(read_delay.get()),
                                                                  int(volume_change_field.get())
                                                                  ))
-start_button.grid(row=14, column=0)
+start_button.grid(row=12, column=0)
 
 # Run the GUI event loop
 main.mainloop()
