@@ -36,7 +36,7 @@ def process_result(result: GestureRecognizerResult, useless1, useless2):
     if not did_read and len(result.gestures) > 0 and result.gestures[0][0].category_name != 'None':
         did_read = True
         gesture = result.gestures[0][0].category_name
-        if gesture == "Victory":
+        if gesture == def_pause_cam:
             paused = not paused
             print('DEBUG: gesture recognition result: {}'.format(result))
         if not paused:
@@ -51,10 +51,10 @@ def process_result(result: GestureRecognizerResult, useless1, useless2):
                     keyboard.press(Key.media_volume_down)
                     keyboard.release(Key.media_volume_down)
                     time.sleep(0.01)
-            elif gesture == "Open_Palm":
+            elif gesture == def_play_pause:
                 keyboard.press(Key.media_play_pause)
                 keyboard.release(Key.media_play_pause)
-            elif gesture == "Closed_Fist":
+            elif gesture == def_stop_cam:
                 request_stop = True
 
 
